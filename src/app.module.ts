@@ -7,11 +7,11 @@ import * as path from 'path';
 import { ApartmentModule } from './apartment/apartment.module';
 dotenv.config({
   path: path.resolve(
-    process.env.NODE_ENV === 'production'
-      ? '.production.env'
+    process.env.NODE_ENV === 'development'
+      ? '.development.env'
       : process.env.NODE_ENV === 'stage'
       ? '.stage.env'
-      : '.development.env',
+      : '.production.env',
   ),
 });
 @Module({
