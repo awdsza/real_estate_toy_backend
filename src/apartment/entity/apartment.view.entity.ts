@@ -9,7 +9,7 @@ import { ViewColumn, ViewEntity } from 'typeorm';
   et_data.jibun as "jibun",
   et_data.apartment_name as "apartmentName",
   CONCAT (sigungu.bubjeongdong_name, ' ', et_data.road_name,' ',et_data.road_name_bonbun, 
-  (CASE WHEN et_Data.road_name_bubun IS NOT NULL THEN CONCAT('-',et_data.road_name_bubun) ELSE '' END )
+  (CASE WHEN et_data.road_name_bubun IS NOT NULL THEN CONCAT('-',et_data.road_name_bubun) ELSE '' END )
   ) as "roadAddress",
   CONCAT (bjd.bubjeongdong_name, ' ', et_data.jibun) as "jibunAddress",
   CONCAT (deal_year,'년 ',deal_month,'월 ',deal_day,'일') as dealDate,
