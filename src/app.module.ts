@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 import { ApartmentModule } from './apartment/apartment.module';
+import { BubjeongdongModule } from './bubjeongdong/bubjeongdong.module';
 dotenv.config({
   path: path.resolve(
     process.env.NODE_ENV === 'development'
@@ -28,6 +29,7 @@ dotenv.config({
       entities: ['dist/**/*.entity{.ts,.js}'],
       synchronize: Boolean(process.env.DATABASE_SYNCHRONIZE),
     }),
+    BubjeongdongModule,
   ],
 })
 export class AppModule {}
