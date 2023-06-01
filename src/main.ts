@@ -6,6 +6,7 @@ async function bootstrap() {
   const whitelist = [
     'http://localhost:3000',
     'https://real-estate-project-three.vercel.app',
+    'https://realestateproject.vercel.app/',
   ];
   app.enableCors({
     origin: function (origin, callback) {
