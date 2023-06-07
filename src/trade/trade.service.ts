@@ -120,7 +120,8 @@ export class TradeService {
 
   async getTradeData(searchParamDto: TradeSearchParamDto): Promise<object> {
     try {
-      const { bubJeongDongCode, jibun, dealYear } = searchParamDto;
+      const { bubJeongDongCode, jibun, startYear, endYear, page, numOfRows } =
+        searchParamDto;
 
       const queryBuilder = this.tradeRepository
         .createQueryBuilder('trade')
@@ -132,10 +133,23 @@ export class TradeService {
           eubmyundong_code: bubJeongDongCode.substring(5),
         })
         .andWhere('jibun = :jibun', { jibun })
-        .andWhere('deal_year = :dealYear', { dealYear })
-        .orderBy('deal_month', 'DESC')
-        .addOrderBy('deal_day', 'DESC');
-      return { data: await queryBuilder.getMany() };
+        .andWhere('deal_year between :startYear and :endYear', {
+          startYear,
+          endYear,
+        })
+        .orderBy('deal_year', 'DESC')
+        .addOrderBy('deal_month', 'DESC')
+        .addOrderBy('deal_day', 'DESC')
+        .limit(numOfRows)
+        .offset((page - 1) * numOfRows);
+      const [list, totalCount] = await queryBuilder.getManyAndCount();
+      return {
+        list,
+        totalCount,
+        page,
+        numOfRows,
+        lastPage: Math.ceil(totalCount / numOfRows),
+      };
     } catch (error) {
       return { error, data: null };
     }
