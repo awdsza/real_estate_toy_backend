@@ -8,7 +8,7 @@ export class TradeEntity {
   @Column()
   deal_amount: number;
 
-  @Column()
+  @Column({ nullable: true })
   build_year: number;
 
   @Column()

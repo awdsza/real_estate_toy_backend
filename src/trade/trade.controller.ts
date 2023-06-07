@@ -13,10 +13,26 @@ export class TradeController {
   async getTradeData(
     @Query('bubJeongDongCode') bubJeongDongCode: string,
     @Query('jibun') jibun: string,
-    @Query('dealYear') dealYear: number,
+    @Query('startYear') startYear: number,
+    @Query('endYear') endYear: number,
+    @Query('page') page: number,
+    @Query('numOfRows') numOfRows: number,
     @Body() searchParamDto: TradeSearchParamDto,
   ): Promise<object> {
-    searchParamDto = { ...searchParamDto, bubJeongDongCode, jibun, dealYear };
-    return await this.tradeService.getTradeData(searchParamDto);
+    searchParamDto = {
+      ...searchParamDto,
+      bubJeongDongCode,
+      jibun,
+      startYear,
+      endYear,
+      page,
+      numOfRows,
+    };
+    try {
+      const resultData = await this.tradeService.getTradeData(searchParamDto);
+      return { error: null, data: resultData };
+    } catch (error) {
+      return { error, data: null };
+    }
   }
 }

@@ -1,5 +1,8 @@
 export class TradeSearchParamDto {
   bubJeongDongCode: string;
   jibun: string;
-  dealYear: number;
+  startYear: number;
+  endYear: number;
+  page: number;
+  numOfRows: number;
 }
