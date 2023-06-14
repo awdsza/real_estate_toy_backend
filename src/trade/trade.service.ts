@@ -1,16 +1,46 @@
-import { InjectRepository } from '@nestjs/typeorm';
+import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
 import { Injectable } from '@nestjs/common';
 import fetch from 'node-fetch';
 import { XMLParser, XMLValidator } from 'fast-xml-parser';
-import { TradeEntity } from './trade.entity';
-import { Repository } from 'typeorm';
+import { TradeEntity } from './entity/trade.entity';
+import { Repository, DataSource } from 'typeorm';
 import { TradeSearchParamDto } from './dto/search-trade.dto';
+import { RentEntity } from './entity/rent.entity';
 @Injectable()
 export class TradeService {
   constructor(
     @InjectRepository(TradeEntity)
     private tradeRepository: Repository<TradeEntity>,
+    @InjectDataSource() private dataSource: DataSource,
+    @InjectRepository(RentEntity)
+    private rentEntity: Repository<RentEntity>,
   ) {}
+  private convertNumberFormat(item): string {
+    return typeof item === 'number' ? item : (item || '').replaceAll(',', '');
+  }
+  private convertRentData(item): object {
+    return {
+      use_request_renewal_contract_right: item['갱신요구권사용'] || '',
+      build_year: item['건축년도'],
+      deposit: this.convertNumberFormat(item['보증금액']),
+      contract_type: item['계약구분'] || '',
+      term_of_contract: item['계약기간'] || '',
+      deal_year: item['년'],
+      dong: item['법정동'],
+      apartment_name: item['아파트'],
+      deal_month: item['월'],
+      monthly_rent: this.convertNumberFormat(item['월세금액']),
+      deal_day: item['일'],
+      area_for_exclusive_use: item['전용면적'],
+      previous_deposit: parseInt(item['종전계약 보증금'] || 0),
+      previous_monthly_rent: parseInt(item['종전계약월세'] || 0),
+      jibun: item['지번'],
+      regional_code: item['지역코드'],
+      floor: item['층'],
+      deal_type:
+        parseInt(item['월세금액'] || '0') === 0 ? 'rent' : 'monthlyRent',
+    };
+  }
   private convertTradeData(item): object {
     return {
       deal_amount:
@@ -46,7 +76,7 @@ export class TradeService {
       rdealer_lawdnm: item['중개사소재지'],
     };
   }
-  async batch(yyyymm: number): Promise<void> {
+  async tradeBatch(yyyymm: number): Promise<void> {
     const url = process.env.JUSO_SIDO_URL;
     const sigunguUrl = process.env.JUSO_SIGUNGU_ENDPOINT;
     const tradeUrl = process.env.ESTATE_TRADE_DETAIL_END_POINT;
@@ -93,10 +123,16 @@ export class TradeService {
                   let bulkData = [];
                   if (tradeLists && !Array.isArray(tradeLists)) {
                     //단일 데이터는 object형태로 읽어오기때문에 배열에 합치는 전략을 사용
-                    bulkData.push(this.convertTradeData(tradeLists));
+                    bulkData.push({
+                      ...this.convertTradeData(tradeLists),
+                      deal_type: 'trade',
+                    });
                   } else if (tradeLists && tradeLists.length > 0) {
                     bulkData = bulkData.concat(
-                      tradeLists.map((item) => this.convertTradeData(item)),
+                      tradeLists.map((item) => ({
+                        ...this.convertTradeData(item),
+                        deal_type: 'trade',
+                      })),
                     );
                   }
                   if (bulkData.length > 0) {
@@ -118,6 +154,78 @@ export class TradeService {
     }
   }
 
+  async rentBatch(yyyymm: number): Promise<void> {
+    const url = process.env.JUSO_SIDO_URL;
+    const sigunguUrl = process.env.JUSO_SIGUNGU_ENDPOINT;
+    const rentUrl = process.env.ESTATE_RENT_DETAIL_END_POINT;
+    try {
+      const sidoResponse = await fetch(url);
+      if (sidoResponse.ok) {
+        const { regcodes: sidoCodes } = await sidoResponse.json();
+        for (let i = 0; i < sidoCodes.length; i++) {
+          const { code } = sidoCodes[i];
+          const sigunguResponse = await fetch(
+            `${sigunguUrl}${code.substring(0, 2)}***0000`,
+          );
+          if (sigunguResponse.ok) {
+            const { regcodes: sigunguCodes } = await sigunguResponse.json();
+            for (let j = 0; j < sigunguCodes.length; j++) {
+              const { code: sigunguCode } = sigunguCodes[j];
+              const tradeResponse = await fetch(
+                `${rentUrl}?numOfRows=9999&LAWD_CD=${sigunguCode.substring(
+                  0,
+                  5,
+                )}&DEAL_YMD=${yyyymm}&serviceKey=${
+                  process.env.ESTATE_APP_API_KEY
+                }`,
+              );
+              console.log(
+                `${rentUrl}?pageNo=1&numOfRows=9999&LAWD_CD=${sigunguCode.substring(
+                  0,
+                  5,
+                )}&DEAL_YMD=${yyyymm}&serviceKey=${
+                  process.env.ESTATE_APP_API_KEY
+                }`,
+              );
+              if (tradeResponse.ok) {
+                const text = await tradeResponse.text();
+                if (XMLValidator.validate(text)) {
+                  const res = new XMLParser({
+                    ignoreAttributes: false,
+                  }).parse(text);
+                  const { header, body } = res.response;
+                  if (header?.resultCode !== 0) {
+                    throw new Error(header.resultMsg);
+                  }
+                  const { item: tradeLists } = body.items;
+                  let bulkData = [];
+                  if (tradeLists && !Array.isArray(tradeLists)) {
+                    //단일 데이터는 object형태로 읽어오기때문에 배열에 합치는 전략을 사용
+                    bulkData.push(this.convertRentData(tradeLists));
+                  } else if (tradeLists && tradeLists.length > 0) {
+                    bulkData = bulkData.concat(
+                      tradeLists.map((item) => this.convertRentData(item)),
+                    );
+                  }
+                  //  console.log(bulkData);
+                  if (bulkData.length > 0) {
+                    this.rentEntity
+                      .createQueryBuilder()
+                      .insert()
+                      .into(RentEntity)
+                      .values(bulkData)
+                      .execute();
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
   async getTradeData(searchParamDto: TradeSearchParamDto): Promise<object> {
     try {
       const { bubJeongDongCode, jibun, startYear, endYear, page, numOfRows } =
@@ -149,6 +257,59 @@ export class TradeService {
         page,
         numOfRows,
         lastPage: Math.ceil(totalCount / numOfRows),
+      };
+    } catch (error) {
+      return { error, data: null };
+    }
+  }
+  async getTradeChartData(
+    searchParamDto: TradeSearchParamDto,
+  ): Promise<object> {
+    try {
+      const { bubJeongDongCode, jibun } = searchParamDto;
+
+      const tradeAvgData = await this.dataSource
+        .createQueryBuilder()
+        .select([
+          'round(avg(deal_amount) / 10000,1) as dealAmount',
+          `CONCAT(deal_year,'.',LPAD(deal_month,2,'0'),'.',LPAD(deal_day,2,'0')) as dealDate`,
+          //`area_for_exclusive_use as areaForExclusiveUse`,
+        ])
+        .from(TradeEntity, 'trade')
+        .where('sigungu_code = :sigungu_code', {
+          sigungu_code: bubJeongDongCode.substring(0, 5),
+        })
+        .andWhere('eubmyundong_code = :eubmyundong_code', {
+          eubmyundong_code: bubJeongDongCode.substring(5),
+        })
+        .andWhere('jibun = :jibun', { jibun })
+        .groupBy('deal_year')
+        .addGroupBy('deal_month')
+        .addGroupBy('deal_day')
+        .orderBy('deal_year', 'ASC')
+        .addOrderBy('deal_month', 'ASC')
+        .addOrderBy('deal_day', 'ASC')
+        .getRawMany();
+      const allTradeData = await this.tradeRepository
+        .createQueryBuilder()
+        .select([
+          'round(deal_amount / 10000,1) as dealAmount',
+          `CONCAT(deal_year,'.',LPAD(deal_month,2,'0'),'.',LPAD(deal_day,2,'0')) as dealDate`,
+        ])
+        .where('sigungu_code = :sigungu_code', {
+          sigungu_code: bubJeongDongCode.substring(0, 5),
+        })
+        .andWhere('eubmyundong_code = :eubmyundong_code', {
+          eubmyundong_code: bubJeongDongCode.substring(5),
+        })
+        .andWhere('jibun = :jibun', { jibun })
+        .orderBy('deal_year', 'ASC')
+        .addOrderBy('deal_month', 'ASC')
+        .addOrderBy('deal_day', 'ASC')
+        .getRawMany();
+      return {
+        tradeAvgData,
+        allTradeData,
       };
     } catch (error) {
       return { error, data: null };

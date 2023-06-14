@@ -1,12 +1,30 @@
 import { Column, Entity, PrimaryColumn, PrimaryGeneratedColumn } from 'typeorm';
-@Entity('estate_trades')
-export class TradeEntity {
+@Entity('estate_rent')
+export class RentEntity {
   @PrimaryGeneratedColumn()
   @PrimaryColumn()
   id: number;
 
+  @Column({ nullable: true })
+  use_request_renewal_contract_right: string;
+
   @Column()
-  deal_amount: number;
+  deposit: number;
+
+  @Column({ nullable: true })
+  contract_type: string;
+
+  @Column({ nullable: true })
+  term_of_contract: string;
+
+  @Column({ nullable: true })
+  monthly_rent: number;
+
+  @Column({ nullable: true })
+  previous_deposit: number;
+
+  @Column({ nullable: true })
+  previous_monthly_rent: number;
 
   @Column({ nullable: true })
   build_year: number;
@@ -15,43 +33,7 @@ export class TradeEntity {
   deal_year: number;
 
   @Column({ nullable: true })
-  road_name: string;
-
-  @Column({ nullable: true })
-  road_name_bonbun: string;
-
-  @Column({ nullable: true })
-  road_name_bubun: string;
-
-  @Column({ nullable: true })
-  road_name_sigungu_code: string;
-
-  @Column({ nullable: true })
-  road_name_seq: string;
-
-  @Column({ nullable: true })
-  road_name_basement_code: string;
-
-  @Column({ nullable: true })
-  road_name_code: string;
-
-  @Column({ nullable: true })
   dong: string;
-
-  @Column({ nullable: true })
-  bonbun: string;
-
-  @Column({ nullable: true })
-  bubun: string;
-
-  @Column({ nullable: true })
-  sigungu_code: string;
-
-  @Column({ nullable: true })
-  eubmyundong_code: string;
-
-  @Column({ nullable: true })
-  land_code: string;
 
   @Column({ nullable: true })
   apartment_name: string;
@@ -61,9 +43,6 @@ export class TradeEntity {
 
   @Column()
   deal_day: number;
-
-  @Column({ nullable: true })
-  sequence: string;
 
   @Column()
   area_for_exclusive_use: number;
@@ -77,18 +56,8 @@ export class TradeEntity {
   @Column({ nullable: true })
   floor: number;
 
-  @Column({ nullable: true })
-  cancel_deal_type: string;
-
-  @Column({ nullable: true })
-  cancel_deal_day: string;
-
-  @Column({ nullable: true })
-  req_gbn: string;
-
-  @Column({ nullable: true })
-  rdealer_lawdnm: string;
-
+  @Column({ default: 'rent' })
+  deal_type: string;
   @Column({
     type: 'datetime',
     default: () => 'NOW()',
