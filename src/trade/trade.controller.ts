@@ -7,7 +7,8 @@ export class TradeController {
 
   @Get('/batch/:yyyymm')
   async insertTradeData(@Param('yyyymm') yyyymm: number): Promise<void> {
-    this.tradeService.batch(yyyymm);
+    this.tradeService.tradeBatch(yyyymm);
+    this.tradeService.rentBatch(yyyymm);
   }
   @Get('/detail')
   async getTradeData(
@@ -30,6 +31,30 @@ export class TradeController {
     };
     try {
       const resultData = await this.tradeService.getTradeData(searchParamDto);
+      return { error: null, data: resultData };
+    } catch (error) {
+      return { error, data: null };
+    }
+  }
+  @Get('/chart')
+  async getTradeChartData(
+    @Query('bubJeongDongCode') bubJeongDongCode: string,
+    @Query('jibun') jibun: string,
+    @Query('startYear') startYear: number,
+    @Query('endYear') endYear: number,
+    @Body() searchParamDto: TradeSearchParamDto,
+  ): Promise<object> {
+    searchParamDto = {
+      ...searchParamDto,
+      bubJeongDongCode,
+      jibun,
+      startYear,
+      endYear,
+    };
+    try {
+      const resultData = await this.tradeService.getTradeChartData(
+        searchParamDto,
+      );
       return { error: null, data: resultData };
     } catch (error) {
       return { error, data: null };
