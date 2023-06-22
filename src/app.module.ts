@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { TradeModule } from './trade/trade.module';
+import { DealModule } from './deal/deal.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import * as dotenv from 'dotenv';
@@ -17,7 +17,7 @@ dotenv.config({
 });
 @Module({
   imports: [
-    TradeModule,
+    DealModule,
     ApartmentModule,
     TypeOrmModule.forRoot({
       type: 'mysql',
