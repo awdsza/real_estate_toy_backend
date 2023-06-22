@@ -1,0 +1,70 @@
+name: Deploy to cloudtype
+on:
+  push:
+    branches:
+      - main
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Connect deploy key
+        uses: cloudtype-github-actions/connect@v1
+        with:
+          token: ${{ secrets.CLOUDTYPE_TOKEN }}
+          ghtoken: ${{ secrets.GHA_TOKEN }}
+      - name: Deploy
+        uses: cloudtype-github-actions/deploy@v1
+        with:
+          token: ${{ secrets.CLOUDTYPE_TOKEN }}
+          project: awdsza/real-estate-toy-backend
+          stage: main
+          yaml: >
+            name: real-estate-toy-backend
+
+            app: node@16
+
+            options:
+              env:
+                - name: NODE_ENV
+                  value: production
+                - name: DATABASE_HOST
+                  var: DATABASE_HOST
+                - name: DATABASE_PORT
+                  var: DATABASE_PORT
+                - name: DATABASE_USERNAME
+                  var: DATABASE_USERNAME
+                - name: DATABASE_SYNCHRONIZE
+                  var: DATABASE_SYNCHRONIZE
+                - name: JUSO_SIDO_URL
+                  var: JUSO_SIDO_URL
+                - name: JUSO_SIGUNGU_ENDPOINT
+                  var: JUSO_SIGUNGU_ENDPOINT
+                - name: JUSO_SIGUNGU_ENDPOINT
+                  var: ESTATE_TRADE_DETAIL_END_POINT
+                - name: DATABASE_PASSWORD
+                  var: DATABASE_PASSWORD
+              ports: "4000"
+              install: npm install
+              build: npm run build
+              start: npm run start:prod
+              buildenv:
+                - name: DATABASE_HOST
+                  value: estate-db.c9wzvzdhdv13.ap-northeast-2.rds.amazonaws.com
+                - name: DATABASE_PORT
+                  value: "3306"
+                - name: DATABASE_USERNAME
+                  value: esate
+                - name: DATABASE_PASSWORD
+                  value: ${{secrets.DATABASE_PASSWORD}}
+                - name: JUSO_SIDO_URL
+                  value: https://grpc-proxy-server-mkvo6j4wsq-du.a.run.app/v1/regcodes?regcode_pattern=*00000000
+                - name: JUSO_SIGUNGU_ENDPOINT
+                  value: https://grpc-proxy-server-mkvo6j4wsq-du.a.run.app/v1/regcodes?is_ignore_zero=true&&regcode_pattern=
+                - name: ESTATE_TRADE_DETAIL_END_POINT
+                  value: http://openapi.molit.go.kr/OpenAPI_ToolInstallPackage/service/rest/RTMSOBJSvc/getRTMSDataSvcAptTradeDev?
+            context:
+              git:
+                url: git@github.com:${{ github.repository }}.git
+                ref: ${{ github.ref }}
